@@ -49,17 +49,13 @@ class QuestionTestcaseCreate(BaseModel):
     input: Optional[str] = None
     expected_output: Optional[str] = None
     is_hidden: Optional[bool] = False
-    weight: Optional[int] = 1
-    timeout_ms: Optional[int] = None
 
 
 class QuestionCreate(BaseModel):
     title: Optional[str] = None
     prompt: Optional[str] = None
-    starter_codes: Optional[Dict[str, str]] = None
     points: Optional[int] = 0
     position: Optional[int] = 0
-    constraints: Optional[Dict[str, Any]] = None
     testcases: Optional[List[QuestionTestcaseCreate]] = []
 
 

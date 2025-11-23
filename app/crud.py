@@ -52,6 +52,10 @@ def get_class(db: Session, class_id: str):
     return db.query(models.Class).filter(models.Class.id == class_id).first()
 
 
+def get_assignment_by_class(db: Session, class_id: str):
+    return db.query(models.Assignment).filter(models.Assignment.class_id == class_id).all()
+
+
 def create_assignment(
     db: Session, assignment_in: schemas.AssignmentCreate, created_by: str
 ) -> models.Assignment:
@@ -79,10 +83,8 @@ def create_question_with_testcases(
         assignment_id=assignment_id,
         title=q_in.title,
         prompt=q_in.prompt,
-        starter_codes=q_in.starter_codes,
         points=q_in.points,
         position=q_in.position,
-        constraints=q_in.constraints,
     )
     db.add(db_q)
     db.commit()

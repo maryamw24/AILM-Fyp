@@ -12,10 +12,12 @@ export const classService = {
     return apiFetch(`/classes?owner_id=${owner_id}`, {
       method: "POST",
       body: JSON. stringify(data),
-    });
+    }); 
   },
 
   getClass: async (id: string ): Promise<Class> => {
     return apiFetch(`/classes/${id}`);
   },
 };
+
+

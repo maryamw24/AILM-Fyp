@@ -26,3 +26,8 @@ def add_question(
 ):
     q = crud.create_question_with_testcases(db, assignment_id, q_in)
     return q
+
+@router.get("/{class_id}")
+def list_assignment_by_class(class_id: str, db: Session = Depends(get_db)):
+    assignemnts = crud.get_assignment_by_class(db, class_id)
+    return assignemnts
