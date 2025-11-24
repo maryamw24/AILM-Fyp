@@ -79,6 +79,47 @@ class AssignmentOut(BaseModel):
     class Config:
         from_attributes = True
 
+# new added schamas
+class QuestionTestcaseOut(BaseModel):
+    id: str
+    input: Optional[str]
+    expected_output: Optional[str]
+    is_hidden: Optional[bool]
+    weight: Optional[int]
+    timeout_ms: Optional[int]
+
+    class Config:
+        from_attributes = True
+
+
+class QuestionOut(BaseModel):
+    id: str
+    title: Optional[str]
+    prompt: Optional[str]
+    points: Optional[int]
+    position: Optional[int]
+    testcases: List[QuestionTestcaseOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+class AssignmentPreviewOut(BaseModel):
+    id: str
+    title: str
+    description: Optional[str]
+    max_score: int
+    class_id: str
+    open_at: Optional[datetime]
+    due_at: Optional[datetime]
+    allow_multiple_submissions: Optional[bool]
+    questions: List[QuestionOut] = []
+
+    class Config:
+        from_attributes = True
+
+##
+
 
 class LabCreate(BaseModel):
     class_id: str

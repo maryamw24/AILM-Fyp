@@ -15,8 +15,7 @@ export const assignmentService = {
 
     addQuestion: async(
   assignmentId: string,
-  data: {
-    questions: Array<{
+  data: {  
       title: string
       prompt: string
       points: number
@@ -26,12 +25,15 @@ export const assignmentService = {
         expected_output: string
         is_hidden: boolean
       }>
-    }>
   }): Promise<any> => {
       return apiFetch(`/assignments/${assignmentId}/questions`, {
         method: "POST",
         body: JSON. stringify(data),
       }); 
     },
+
+    getAssignmentDetails: async(assignmentId: string):Promise<any>=>{
+       return apiFetch(`/assignments/${assignmentId}/preview`);
+    }
 };
 

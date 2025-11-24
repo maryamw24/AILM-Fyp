@@ -87,7 +87,7 @@ def create_question_with_testcases(
         position=q_in.position,
     )
     db.add(db_q)
-    db.commit()
+    db.commit()     
     db.refresh(db_q)
     for tc in q_in.testcases or []:
         db_tc = models.QuestionTestcase(
@@ -95,14 +95,40 @@ def create_question_with_testcases(
             input=tc.input,
             expected_output=tc.expected_output,
             is_hidden=tc.is_hidden,
-            weight=tc.weight,
-            timeout_ms=tc.timeout_ms,
         )
         db.add(db_tc)
     db.commit()
     db.refresh(db_q)
     return db_q
 
+
+# new crud function
+
+def get_assignment_preview(db: Session, assignment_id: str):
+    assignment = (
+        db.query(models.Assignment)
+        .filter(models.Assignment.id == assignment_id)
+        .first()
+    )
+
+    if not assignment:
+        return None
+
+    # force load questions + testcases
+    questions = (
+        db.query(models.Question)
+        .filter(models.Question.assignment_id == assignment_id)
+        .order_by(models.Question.position.asc())
+        .all()
+    )
+
+    for q in questions:
+        q.testcases  # trigger lazy load
+
+    assignment.questions = questions
+    return assignment
+
+###
 
 def create_lab(db: Session, lab_in: schemas.LabCreate, created_by: str) -> models.Lab:
     db_lab = models.Lab(

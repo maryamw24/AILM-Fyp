@@ -31,3 +31,14 @@ def add_question(
 def list_assignment_by_class(class_id: str, db: Session = Depends(get_db)):
     assignemnts = crud.get_assignment_by_class(db, class_id)
     return assignemnts
+
+
+@router.get("/{assignment_id}/preview", response_model=schemas.AssignmentPreviewOut)
+def preview_assignment(assignment_id: str, db: Session = Depends(get_db)):
+    assignment = crud.get_assignment_preview(db, assignment_id)
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    return assignment
+

@@ -136,23 +136,18 @@ export default function AddQuestionsPage() {
   setIsLoading(true);
 
   try {
-    // Loop through all questions
     for (const q of questions) {
       await assignmentService.addQuestion(assignmentId, {
-        questions: [
-          {
-            title: q.title,
-            prompt: q.prompt,
-            points: q.points,
-            position: q.position,
-            testcases: q.testcases.map((tc) => ({
-              input: tc.input,
-              expected_output: tc.expected_output,
-              is_hidden: tc.is_hidden,
-            })),
-          },
-        ],
-      });
+        title: q.title,
+        prompt: q.prompt,
+        points: q.points,
+        position: q.position,
+        testcases: q.testcases.map(tc => ({
+          input: tc.input,
+          expected_output: tc.expected_output,
+          is_hidden: tc.is_hidden
+        }))
+});
     }
 
     router.push(`/classes/${classId}`);
