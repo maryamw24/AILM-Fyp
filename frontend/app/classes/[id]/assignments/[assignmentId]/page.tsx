@@ -6,30 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, CheckCircle2, EyeOff } from "lucide-react"
 import { assignmentService } from "@/services/assignemntService"
+import { Assignment } from "@/models/assignment"
 
-interface TestCase {
-  id: number
-  input: string
-  expected_output: string
-  is_hidden: boolean
-}
 
-interface Question {
-  id: number
-  title: string
-  prompt: string
-  points: number
-  testcases: TestCase[]
-}
-
-interface Assignment {
-  id: number
-  title: string
-  description: string
-  due_at: string
-  max_score: number
-  questions: Question[]
-}
 
 export default function ViewAssignmentPage() {
   const params = useParams()
@@ -93,7 +72,7 @@ export default function ViewAssignmentPage() {
           <div className="flex items-center gap-2 text-sm text-muted-foreground ml-11">
             <CheckCircle2 className="w-4 h-4" />
             <span>
-              Max Score: {assignment.max_score} | Due: {assignment.due_at}
+              Max Score: {assignment.max_score} | Due: {assignment.dueAt}
             </span>
           </div>
         </div>
@@ -118,7 +97,7 @@ export default function ViewAssignmentPage() {
                   </div>
                   <div>
                     <strong className="text-foreground">Due Date:</strong>
-                    <p className="text-muted-foreground">{assignment.due_at}</p>
+                    <p className="text-muted-foreground">{assignment.dueAt}</p>
                   </div>
                 </div>
               </div>

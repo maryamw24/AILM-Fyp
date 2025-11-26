@@ -7,16 +7,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { assignmentService } from "@/services/assignemntService"
-
-interface Assignment {
-  id: string
-  title: string
-  dueAt: string
-  status: "pending" 
-  submissions: number
-  total: number
-  isActive: boolean
-}
+import { Assignment } from "@/models/assignment"
 
 export function AssignmentsTab() {
   const params = useParams()
@@ -69,12 +60,7 @@ export function AssignmentsTab() {
                   <Calendar className="w-4 h-4 flex-shrink-0" />
                   <span>Due: {assignment.dueAt}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                  <span>
-                    {assignment.submissions}/{assignment.total} submitted
-                  </span>
-                </div>
+                
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-shrink-0">

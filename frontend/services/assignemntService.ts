@@ -1,8 +1,9 @@
 import { apiFetch } from "@/lib/api";
+import { Assignment } from "@/models/assignment";
 
 
 export const assignmentService = {
-  getAssignemntsByClass: async (class_id: string): Promise<any[]> => {
+  getAssignemntsByClass: async (class_id: string): Promise<Assignment[]> => {
     return apiFetch(`/assignments/${class_id}`);
   },
 
@@ -32,7 +33,7 @@ export const assignmentService = {
       }); 
     },
 
-    getAssignmentDetails: async(assignmentId: string):Promise<any>=>{
+    getAssignmentDetails: async(assignmentId: string):Promise<Assignment>=>{
        return apiFetch(`/assignments/${assignmentId}/preview`);
     }
 };

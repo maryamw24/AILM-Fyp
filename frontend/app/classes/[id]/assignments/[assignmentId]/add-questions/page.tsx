@@ -9,22 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trash2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { assignmentService } from "@/services/assignemntService"
+import { Question } from "@/models/question"
 
-interface TestCase {
-  id: string
-  input: string
-  expected_output: string
-  is_hidden: boolean
-}
-
-interface Question {
-  id: string
-  title: string
-  prompt: string
-  points: number
-  position: number
-  testcases: TestCase[]
-}
 
 export default function AddQuestionsPage() {
   const params = useParams()
