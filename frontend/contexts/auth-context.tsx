@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { User } from "@/models/user"
+import { userService } from "@/services/userService"
 
 
 interface AuthContextType {
@@ -32,42 +33,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const login = async (email: string, password: string) => {
+    const login = async (email: string, password: string) => {
     setIsLoading(true)
     try {
-      // Simulate API call with demo users
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      let userData: User
-      if (email === "teacher@ailm.com" && password === "password") {
-        userData = {
-          id: "1",
-          email: "teacher@ailm.com",
-          name: "John Teacher",
-          role: "teacher",
-        }
-      } else if (email === "student@ailm.com" && password === "password") {
-        userData = {
-          id: "2",
-          email: "student@ailm.com",
-          name: "Jane Student",
-          role: "student",
-        }
-      } else {
-        throw new Error("Invalid credentials")
-      }
-
-      setUser(userData)
+      const userData = await userService.login( {email, password})
+      setUser(userData as User)
       localStorage.setItem("ailm_user", JSON.stringify(userData))
     } finally {
       setIsLoading(false)
     }
   }
 
+
   const logout = () => {
     setUser(null)
     localStorage.removeItem("ailm_user")
   }
+  
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, logout, isAuthenticated: !!user }}>
