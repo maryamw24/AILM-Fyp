@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI
 from .database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import teacher, classes, assignments, labs, submissions
+from .routers import teacher, classes, assignments, labs, submissions, resources, messages
 
 app = FastAPI(title="AILM - Backend", version="1.0")
 
@@ -14,6 +14,8 @@ app.include_router(classes.router, prefix="/classes", tags=["Classes"])
 app.include_router(assignments.router, prefix="/assignments", tags=["Assignments"])
 app.include_router(labs.router, prefix="/labs", tags=["Labs"])
 app.include_router(submissions.router, prefix="/submissions", tags=["Submissions"])
+app.include_router(resources.router, prefix="/resources", tags=["Resources"])
+app.include_router(messages.router, prefix="/messages", tags=["Messages"])
 
 app.add_middleware(
     CORSMiddleware,

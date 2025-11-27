@@ -10,6 +10,14 @@ class UserCreate(BaseModel):
     display_name: Optional[str] = None
 
 
+class UserSignup(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
+    display_name: Optional[str] = None
+    role: Optional[str] = "student"  # student|teacher|ta|admin
+
+
 class UserOut(BaseModel):
     id: str
     email: EmailStr
@@ -40,6 +48,8 @@ class ClassOut(BaseModel):
     description: Optional[str]
     code: Optional[str]
     owner_id: str
+    owner: Optional[Dict[str, Any]] = None
+    member_count: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -113,6 +123,7 @@ class AssignmentPreviewOut(BaseModel):
     open_at: Optional[datetime]
     due_at: Optional[datetime]
     allow_multiple_submissions: Optional[bool]
+    allowed_languages: Optional[List[str]] = None
     questions: List[QuestionOut] = []
 
     class Config:
@@ -144,6 +155,11 @@ class AddStudentToClass(BaseModel):
     user_email: EmailStr
 
 
+class JoinClassByCode(BaseModel):
+    code: str
+    user_id: str
+
+
 class SubmissionCreate(BaseModel):
     question_id: str
     user_id: str
@@ -170,3 +186,44 @@ class GradeRequest(BaseModel):
     passed_test_count: Optional[int] = None
     total_test_count: Optional[int] = None
     result_details: Optional[Dict[str, Any]] = None
+
+
+class ResourceCreate(BaseModel):
+    class_id: str
+    title: str
+    description: Optional[str] = None
+    file_url: str
+    file_type: Optional[str] = None
+
+
+class ResourceOut(BaseModel):
+    id: str
+    class_id: str
+    title: Optional[str]
+    description: Optional[str]
+    file_url: Optional[str]
+    file_type: Optional[str]
+    uploaded_at: Optional[datetime]
+    uploader_id: str
+
+    class Config:
+        from_attributes = True
+
+
+class MessageCreate(BaseModel):
+    class_id: str
+    content: str
+    message_type: Optional[str] = "chat"
+
+
+class MessageOut(BaseModel):
+    id: str
+    class_id: Optional[str]
+    sender_id: str
+    content: Optional[str]
+    message_type: Optional[str]
+    created_at: Optional[datetime]
+    sender: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True

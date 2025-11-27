@@ -9,19 +9,25 @@ import { AssignmentsTab } from "@/components/tabs/assignment-tab";
 import { ResourcesTab } from "@/components/tabs/resources-tab";
 import { LeaderboardTab } from "@/components/tabs/leaderboard-tab";
 import { ChatTab } from "@/components/tabs/chat-tab";
+import { MembersTab } from "@/components/tabs/members-tab";
 import Link from "next/link";
 import { classService } from "@/services/classService";
 import { Class } from "@/models/class";
+import { useAuth } from "@/contexts/auth-context";
 
 
 
 export default function ClassDetailPage() {
   const params = useParams();
+  const { user } = useAuth();
   const classId = params.id as string;
 
   const [activeTab, setActiveTab] = useState("assignments");
   const [classData, setClassData] = useState<Class | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const isTeacher = user?.role === "teacher";
+  const isOwner = classData?.owner_id === user?.id;
 
   useEffect(() => {
     async function fetchClass() {
@@ -71,11 +77,12 @@ export default function ClassDetailPage() {
       <div className="bg-background border-b border-border px-4 sm:px-6 lg:px-8 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-0">
+            <TabsList className={`grid w-full ${isTeacher ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"} gap-2 sm:gap-0`}>
               <TabsTrigger value="assignments">Assignments</TabsTrigger>
               <TabsTrigger value="resources">Resources</TabsTrigger>
               <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
               <TabsTrigger value="chat">Chat</TabsTrigger>
+              {isTeacher && <TabsTrigger value="members">Members</TabsTrigger>}
             </TabsList>
           </Tabs>
         </div>
@@ -89,12 +96,14 @@ export default function ClassDetailPage() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-semibold">Assignments</h2>
-                  <Link href={`/classes/${classId}/add-assignment`}>
-                    <Button className="gap-2">
-                      <Plus className="w-4 h-4" />
-                      Create Assignment
-                    </Button>
-                  </Link>
+                  {isTeacher && isOwner && (
+                    <Link href={`/classes/${classId}/add-assignment`}>
+                      <Button className="gap-2">
+                        <Plus className="w-4 h-4" />
+                        Create Assignment
+                      </Button>
+                    </Link>
+                  )}
                 </div>
                 <AssignmentsTab />
               </div>
@@ -104,12 +113,14 @@ export default function ClassDetailPage() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-semibold">Resources</h2>
-                  <Link href={`/classes/${classId}/add-resource`}>
-                    <Button className="gap-2">
-                      <Plus className="w-4 h-4" />
-                      Add Resource
-                    </Button>
-                  </Link>
+                  {isTeacher && isOwner && (
+                    <Link href={`/classes/${classId}/add-resource`}>
+                      <Button className="gap-2">
+                        <Plus className="w-4 h-4" />
+                        Add Resource
+                      </Button>
+                    </Link>
+                  )}
                 </div>
                 <ResourcesTab />
               </div>
@@ -117,6 +128,7 @@ export default function ClassDetailPage() {
 
             {activeTab === "leaderboard" && <LeaderboardTab />}
             {activeTab === "chat" && <ChatTab />}
+            {activeTab === "members" && isTeacher && <MembersTab />}
 
           </div>
         </div>

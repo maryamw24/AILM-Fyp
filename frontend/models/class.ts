@@ -8,4 +8,11 @@ export interface Class {
   deleted_at: string | null;
   code: string;
   owner_id: string;
+  owner?: {
+    id: string;
+    full_name?: string | null;
+    display_name?: string | null;
+    email: string;
+  } | null;
+  member_count?: number;
 }

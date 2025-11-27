@@ -8,35 +8,60 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Upload } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { resourceService } from "@/services/resourceService"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function AddResourcePage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const classId = params.id as string
 
-  const [resourceType, setResourceType] = useState<"file" | "text">("file")
   const [resourceTitle, setResourceTitle] = useState("")
   const [resourceDescription, setResourceDescription] = useState("")
-  const [textContent, setTextContent] = useState("")
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [resourceUrl, setResourceUrl] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadedFile(e.target.files[0])
+  const handleSubmit = async () => {
+    if (!resourceTitle.trim() || !resourceUrl.trim()) {
+      alert("Please fill in title and URL")
+      return
     }
-  }
 
-  const handleSubmit = () => {
-    // Handle submission logic here
-    console.log({
-      title: resourceTitle,
-      description: resourceDescription,
-      type: resourceType,
-      content: resourceType === "file" ? uploadedFile : textContent,
-    })
-    router.back()
+    if (!user) {
+      alert("You must be logged in to add a resource")
+      return
+    }
+
+    // Basic URL validation
+    try {
+      new URL(resourceUrl)
+    } catch {
+      alert("Please enter a valid URL")
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      await resourceService.create(
+        {
+          class_id: classId,
+          title: resourceTitle,
+          description: resourceDescription || undefined,
+          file_url: resourceUrl,
+          file_type: undefined, // Could detect from URL if needed
+        },
+        user.id
+      )
+      router.push(`/classes/${classId}`)
+    } catch (error) {
+      console.error("Error creating resource:", error)
+      alert("Failed to create resource")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -80,62 +105,24 @@ export default function AddResourcePage() {
             </div>
           </Card>
 
-          {/* Resource Type Selection */}
+          {/* Resource URL */}
           <Card className="p-4 sm:p-6 border border-border">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Resource Type</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Resource URL</h2>
             <div className="space-y-4">
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    value="file"
-                    checked={resourceType === "file"}
-                    onChange={(e) => setResourceType(e.target.value as "file")}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm font-medium text-foreground">Upload File</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    value="text"
-                    checked={resourceType === "text"}
-                    onChange={(e) => setResourceType(e.target.value as "text")}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm font-medium text-foreground">Add Text</span>
-                </label>
+              <div>
+                <label className="text-sm font-medium text-foreground">Resource URL *</label>
+                <Input
+                  type="url"
+                  placeholder="https://example.com/resource"
+                  value={resourceUrl}
+                  onChange={(e) => setResourceUrl(e.target.value)}
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter a URL to a document, video, article, or other resource
+                </p>
               </div>
             </div>
-          </Card>
-
-          {/* Content Section */}
-          <Card className="p-4 sm:p-6 border border-border">
-            {resourceType === "file" ? (
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-4">Upload File</h2>
-                <div className="border-2 border-dashed border-border rounded-lg p-6 sm:p-8 text-center hover:border-accent/50 transition-colors cursor-pointer">
-                  <Input type="file" onChange={handleFileChange} className="hidden" id="file-upload" />
-                  <label htmlFor="file-upload" className="block cursor-pointer">
-                    <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">Click to upload or drag and drop</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {uploadedFile ? uploadedFile.name : "PDF, DOC, DOCX, PPT up to 50MB"}
-                    </p>
-                  </label>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-4">Text Content</h2>
-                <Textarea
-                  placeholder="Enter your resource text content here..."
-                  value={textContent}
-                  onChange={(e) => setTextContent(e.target.value)}
-                  className="min-h-64"
-                />
-              </div>
-            )}
           </Card>
 
           {/* Action Buttons */}
@@ -145,8 +132,8 @@ export default function AddResourcePage() {
                 Cancel
               </Button>
             </Link>
-            <Button onClick={handleSubmit} className="w-full sm:w-auto">
-              Add Resource
+            <Button onClick={handleSubmit} disabled={isLoading} className="w-full sm:w-auto">
+              {isLoading ? "Adding..." : "Add Resource"}
             </Button>
           </div>
         </div>

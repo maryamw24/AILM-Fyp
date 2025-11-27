@@ -1,11 +1,15 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { classService } from "@/services/classService"
+import { Class } from "@/models/class"
+import { ClassCard } from "@/components/class-card"
+import Link from "next/link"
 
 const performanceData = [
   { week: "Week 1", score: 75 },
@@ -18,12 +22,34 @@ const performanceData = [
 export default function StudentDashboard() {
   const { user, logout, isLoading } = useAuth()
   const router = useRouter()
+  const [enrolledClasses, setEnrolledClasses] = useState<Class[]>([])
+  const [classesLoading, setClassesLoading] = useState(true)
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "student")) {
       router.push("/auth")
     }
   }, [user, isLoading, router])
+
+  useEffect(() => {
+    if (user && user.role === "student") {
+      loadEnrolledClasses()
+    }
+  }, [user])
+
+  const loadEnrolledClasses = async () => {
+    if (!user) return
+    
+    setClassesLoading(true)
+    try {
+      const classes = await classService.getStudentClasses(user.id)
+      setEnrolledClasses(classes)
+    } catch (err) {
+      console.error("Failed to load enrolled classes:", err)
+    } finally {
+      setClassesLoading(false)
+    }
+  }
 
   if (isLoading || !user) return null
 
@@ -47,7 +73,9 @@ export default function StudentDashboard() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Enrolled Classes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">4</div>
+            <div className="text-3xl font-bold text-foreground">
+              {classesLoading ? "..." : enrolledClasses.length}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">All up to date</p>
           </CardContent>
         </Card>
@@ -109,9 +137,11 @@ export default function StudentDashboard() {
             <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button className="w-full bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white">
-              View My Classes
-            </Button>
+            <Link href="/student-classes" className="w-full">
+              <Button className="w-full bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white">
+                View My Classes
+              </Button>
+            </Link>
             <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white">
               My Assignments
             </Button>
@@ -134,6 +164,47 @@ export default function StudentDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Enrolled Classes Section */}
+      {!classesLoading && enrolledClasses.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">My Classes</CardTitle>
+                <CardDescription>Classes you're currently enrolled in</CardDescription>
+              </div>
+              <Link href="/student-classes">
+                <Button variant="outline" size="sm">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {enrolledClasses.slice(0, 3).map((classItem) => (
+                <ClassCard
+                  key={classItem.id}
+                  id={classItem.id}
+                  name={classItem.title}
+                  students={classItem.member_count || 0}
+                  teacher={classItem.owner?.full_name || "N/A"}
+                />
+              ))}
+            </div>
+            {enrolledClasses.length > 3 && (
+              <div className="mt-4 text-center">
+                <Link href="/student-classes">
+                  <Button variant="outline">
+                    View {enrolledClasses.length - 3} more classes
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -1,29 +1,64 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
-import { Trophy, Flame, Medal } from "lucide-react"
-
-interface LeaderboardEntry {
-  rank: number
-  name: string
-  score: number
-  streak: number
-  assignments: number
-}
-
-const leaderboard: LeaderboardEntry[] = [
-  { rank: 1, name: "Alice Chen", score: 9850, streak: 15, assignments: 28 },
-  { rank: 2, name: "Bob Williams", score: 9720, streak: 12, assignments: 27 },
-  { rank: 3, name: "Carol Martinez", score: 9580, streak: 10, assignments: 26 },
-  { rank: 4, name: "David Park", score: 9340, streak: 8, assignments: 25 },
-  { rank: 5, name: "Emma Taylor", score: 9120, streak: 6, assignments: 24 },
-]
+import { Trophy, Medal, CheckCircle2 } from "lucide-react"
+import { leaderboardService, LeaderboardEntry } from "@/services/leaderboardService"
 
 export function LeaderboardTab() {
+  const params = useParams()
+  const classId = params.id as string
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadLeaderboard()
+  }, [classId])
+
+  const loadLeaderboard = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await leaderboardService.getByClass(classId)
+      setLeaderboard(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load leaderboard")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return <div className="text-center py-8 text-muted-foreground">Loading leaderboard...</div>
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-destructive mb-4">{error}</p>
+        <button onClick={loadLeaderboard} className="text-sm text-primary hover:underline">
+          Retry
+        </button>
+      </div>
+    )
+  }
+
+  if (leaderboard.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">No leaderboard data available yet.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {leaderboard.slice(0, 3).map((entry, index) => (
           <Card
-            key={entry.rank}
+            key={entry.user_id}
             className={`p-4 sm:p-6 text-center border-2 ${
               index === 0
                 ? "border-yellow-500 bg-yellow-50/50 dark:bg-yellow-900/10"
@@ -39,7 +74,12 @@ export function LeaderboardTab() {
             </div>
             <h3 className="text-base sm:text-lg font-bold text-foreground">{entry.name}</h3>
             <p className="text-xs sm:text-sm text-muted-foreground">#{entry.rank}</p>
-            <div className="mt-2 text-lg sm:text-xl font-bold text-primary">{entry.score} pts</div>
+            <div className="mt-2 text-lg sm:text-xl font-bold text-primary">
+              {entry.completion_count}/{entry.total_assignments}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {Math.round(entry.completion_percentage)}% Complete
+            </p>
           </Card>
         ))}
       </div>
@@ -52,30 +92,32 @@ export function LeaderboardTab() {
                 <th className="px-3 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-foreground">Rank</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-foreground">Name</th>
                 <th className="px-3 sm:px-6 py-3 text-center text-xs sm:text-sm font-semibold text-foreground">
-                  Score
+                  Completed
                 </th>
                 <th className="px-3 sm:px-6 py-3 text-center text-xs sm:text-sm font-semibold text-foreground hidden sm:table-cell">
-                  Streak
+                  Total
                 </th>
                 <th className="px-3 sm:px-6 py-3 text-center text-xs sm:text-sm font-semibold text-foreground hidden sm:table-cell">
-                  Assignments
+                  Progress
                 </th>
               </tr>
             </thead>
             <tbody>
               {leaderboard.map((entry) => (
-                <tr key={entry.rank} className="border-b border-border hover:bg-muted/50 transition-colors">
+                <tr key={entry.user_id} className="border-b border-border hover:bg-muted/50 transition-colors">
                   <td className="px-3 sm:px-6 py-4 text-sm font-bold text-primary">#{entry.rank}</td>
                   <td className="px-3 sm:px-6 py-4 text-sm font-medium text-foreground">{entry.name}</td>
-                  <td className="px-3 sm:px-6 py-4 text-center text-sm font-semibold text-foreground">{entry.score}</td>
-                  <td className="px-3 sm:px-6 py-4 text-center text-sm hidden sm:table-cell">
-                    <div className="flex items-center justify-center gap-1 text-accent">
-                      <Flame className="w-4 h-4" />
-                      <span>{entry.streak}</span>
-                    </div>
+                  <td className="px-3 sm:px-6 py-4 text-center text-sm font-semibold text-foreground">
+                    {entry.completion_count}
                   </td>
                   <td className="px-3 sm:px-6 py-4 text-center text-sm hidden sm:table-cell text-foreground">
-                    {entry.assignments}
+                    {entry.total_assignments}
+                  </td>
+                  <td className="px-3 sm:px-6 py-4 text-center text-sm hidden sm:table-cell">
+                    <div className="flex items-center justify-center gap-1 text-accent">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{Math.round(entry.completion_percentage)}%</span>
+                    </div>
                   </td>
                 </tr>
               ))}

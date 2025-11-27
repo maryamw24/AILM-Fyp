@@ -5,43 +5,58 @@ import { ClassCard } from "@/components/class-card"
 import { CreateClassDialog } from "@/components/create-class-dialog"
 import { classService } from "@/services/classService"
 import { Class } from "@/models/class"
+import { useAuth } from "@/contexts/auth-context"
+import { useRouter } from "next/navigation"
 
 export default function ClassesPage() {
+  const { user, isLoading: authLoading } = useAuth()
+  const router = useRouter()
   const [classes, setClasses] = useState<Class[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
 
-
   useEffect(() => {
-  classService.getAll()
-    .then((res) => {
-      const data = res;
-      setClasses(res);
-      setLoading(false)
-    })
-    .catch((err) => {
-      setError(err.message)
-      setLoading(false)
-    })
-}, [])
+    if (!authLoading && (!user || user.role !== "teacher")) {
+      router.push("/auth")
+      return
+    }
 
+    if (user && user.role === "teacher") {
+      classService.getAll(user.id)
+        .then((res) => {
+          setClasses(res)
+          setLoading(false)
+        })
+        .catch((err) => {
+          setError(err.message)
+          setLoading(false)
+        })
+    }
+  }, [user, authLoading, router])
 
-const handleCreateClass = async (data: { title: string; description: string; code: string; is_public : boolean }) => {
-  const newClass = await classService.create(data, "bfb5f450-e5b4-42b3-a1de-c5cd92618a90");
-  setClasses(prev => [...prev, newClass]);
-  setDialogOpen(false);
-};
+  const handleCreateClass = async (data: { title: string; description: string; code: string; is_public: boolean }) => {
+    if (!user) return
+    try {
+      const newClass = await classService.create(data, user.id)
+      setClasses(prev => [...prev, newClass])
+      setDialogOpen(false)
+      router.push(`/classes/${newClass.id}`)
+    } catch (error) {
+      console.error("Failed to create class:", error)
+      alert("Failed to create class. Please try again.")
+    }
+  }
 
-
-
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <p className="text-muted-foreground">Loading classes...</p>
       </div>
     )
   }
+
+
 
   // Error state
   if (error) {
@@ -87,8 +102,8 @@ const handleCreateClass = async (data: { title: string; description: string; cod
               key={classItem.id}
               id={classItem.id}
               name={classItem.title}
-              students= {30}
-              teacher={"Maida Shahid"}
+              students={classItem.member_count || 0}
+              teacher={classItem.owner?.display_name || classItem.owner?.full_name || classItem.owner?.email || "Unknown"}
             />
           ))}
         </div>

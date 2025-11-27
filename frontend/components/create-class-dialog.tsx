@@ -19,21 +19,19 @@ import { classService } from "@/services/classService"; // <-- IMPORTANT
 interface CreateClassDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (data: { title: string; description: string; code: string; is_public: boolean }) => void
+  onCreate: (data: { title: string; description: string; code: string; is_public: boolean }) => void;
 }
 
 export function CreateClassDialog({ open, onOpenChange, onCreate }: CreateClassDialogProps) {
   const [className, setClassName] = useState("");
   const [description, setDescription] = useState("");
-  const [code, setCode] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!className.trim() || !code.trim()) return;
+    if (!className.trim()) return;
 
     try {
       setIsLoading(true);
@@ -41,14 +39,12 @@ export function CreateClassDialog({ open, onOpenChange, onCreate }: CreateClassD
       // Clear fields
       setClassName("");
       setDescription("");
-      setCode("");
-      setIsPublic(true);
 
       onCreate({
         title: className,
         description,
-        code,
-        is_public: isPublic,
+        code: "", // Empty code will trigger auto-generation on backend
+        is_public: true, // All classes are public by default
       });
           // Notify parent
       onOpenChange(false);  // Close modal
@@ -96,30 +92,11 @@ export function CreateClassDialog({ open, onOpenChange, onCreate }: CreateClassD
             />
           </div>
 
-          {/* Class Code */}
-          <div className="space-y-2">
-            <Label htmlFor="code" className="text-foreground">Class Code</Label>
-            <Input
-              id="code"
-              placeholder="e.g., Xy12ZQ"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="border-border focus-visible:ring-primary"
-            />
-          </div>
-
-          {/* Public/Private Toggle */}
-          <div className="flex items-center space-x-2 mt-2">
-            <input
-              type="checkbox"
-              id="isPublic"
-              checked={isPublic}
-              onChange={(e) => setIsPublic(e.target.checked)}
-              className="w-4 h-4"
-            />
-            <Label htmlFor="isPublic" className="text-foreground">
-              Make Class Public
-            </Label>
+          {/* Info about auto-generated code */}
+          <div className="bg-muted/50 p-3 rounded-md">
+            <p className="text-xs text-muted-foreground">
+              A unique class code will be automatically generated for students to join this class.
+            </p>
           </div>
 
           <DialogFooter>
@@ -129,7 +106,7 @@ export function CreateClassDialog({ open, onOpenChange, onCreate }: CreateClassD
 
             <Button
               type="submit"
-              disabled={!className.trim() || !code.trim() || isLoading}
+              disabled={!className.trim() || isLoading}
               className="bg-gradient-to-r from-primary to-accent text-primary-foreground"
             >
               {isLoading ? "Creating..." : "Create Class"}

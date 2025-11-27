@@ -3,17 +3,34 @@
 import { ChevronLeft, LayoutDashboard, BookOpen, Users, Settings, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/sidebar-provider"
+import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 export function Sidebar() {
   const { isOpen, toggleSidebar } = useSidebar()
+  const { user, logout } = useAuth()
   const pathname = usePathname()
 
+  const isTeacher = user?.role === "teacher"
+  const isStudent = user?.role === "student"
+
   const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", href: "/", active: pathname === "/" },
-    { icon: BookOpen, label: "Classes", href: "/classes", active: pathname === "/classes" },
-    { icon: Users, label: "Students", href: "/students", active: pathname === "/students" },
+    { 
+      icon: LayoutDashboard, 
+      label: "Dashboard", 
+      href: isTeacher ? "/teacher-dashboard" : isStudent ? "/student-dashboard" : "/",
+      active: pathname === "/teacher-dashboard" || pathname === "/student-dashboard" || pathname === "/"
+    },
+    { 
+      icon: BookOpen, 
+      label: "Classes", 
+      href: isTeacher ? "/classes" : "/student-classes",
+      active: pathname === "/classes" || pathname === "/student-classes"
+    },
+    ...(isTeacher ? [
+      { icon: Users, label: "Students", href: "/students", active: pathname === "/students" },
+    ] : []),
     { icon: Settings, label: "Settings", href: "/settings", active: pathname === "/settings" },
   ]
 
@@ -68,6 +85,7 @@ export function Sidebar() {
 
           {/* Sidebar Footer */}
           <button
+            onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/20 transition-all duration-200"
             title={!isOpen ? "Logout" : undefined}
           >

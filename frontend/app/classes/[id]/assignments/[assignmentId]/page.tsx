@@ -7,18 +7,22 @@ import { Card } from "@/components/ui/card"
 import { ArrowLeft, CheckCircle2, EyeOff } from "lucide-react"
 import { assignmentService } from "@/services/assignemntService"
 import { Assignment } from "@/models/assignment"
+import { useAuth } from "@/contexts/auth-context"
 
 
 
 export default function ViewAssignmentPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const classId = params.id as string
   const assignmentId = params.assignmentId as string
 
   const [assignment, setAssignment] = useState<Assignment | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const isTeacher = user?.role === "teacher"
 
   useEffect(() => {
     const loadAssignment = async () => {
@@ -90,15 +94,29 @@ export default function ViewAssignmentPage() {
                   <strong className="text-foreground">Description:</strong>
                   <p className="text-muted-foreground mt-1">{assignment.description}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <strong className="text-foreground">Max Score:</strong>
                     <p className="text-muted-foreground">{assignment.max_score} points</p>
                   </div>
                   <div>
                     <strong className="text-foreground">Due Date:</strong>
-                    <p className="text-muted-foreground">{assignment.dueAt}</p>
+                    <p className="text-muted-foreground">
+                      {assignment.dueAt ? new Date(assignment.dueAt).toLocaleString() : "No due date"}
+                    </p>
                   </div>
+                  {(assignment as any).allowed_languages && Array.isArray((assignment as any).allowed_languages) && (assignment as any).allowed_languages.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <strong className="text-foreground">Allowed Languages:</strong>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {(assignment as any).allowed_languages.map((lang: string, idx: number) => (
+                          <span key={idx} className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary">
+                            {lang}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
@@ -124,43 +142,52 @@ export default function ViewAssignmentPage() {
                         </p>
                       </div>
 
-                      {/* Test Cases */}
-                      <div>
-                        <h4 className="font-medium text-foreground mb-3">Test Cases:</h4>
-                        <div className="space-y-3">
-                          {question.testcases.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No test cases</p>
-                          ) : (
-                            question.testcases.map((testCase, index) => (
-                              <Card key={testCase.id} className="p-3 bg-muted border border-border/50 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-sm">Test Case {index + 1}</span>
-                                  {testCase.is_hidden && (
-                                    <span className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                      <EyeOff className="w-3 h-3" />
-                                      Hidden
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-sm text-muted-foreground space-y-1">
-                                  <div>
-                                    <strong>Input:</strong>
-                                    <div className="bg-background p-2 rounded mt-1 font-mono text-xs">
-                                      {testCase.input}
+                      {/* Test Cases - Only show to teachers */}
+                      {isTeacher && (
+                        <div>
+                          <h4 className="font-medium text-foreground mb-3">Test Cases:</h4>
+                          <div className="space-y-3">
+                            {question.testcases.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">No test cases</p>
+                            ) : (
+                              question.testcases.map((testCase, index) => (
+                                <Card key={testCase.id} className="p-3 bg-muted border border-border/50 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium text-sm">Test Case {index + 1}</span>
+                                    {testCase.is_hidden && (
+                                      <span className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                        <EyeOff className="w-3 h-3" />
+                                        Hidden
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground space-y-1">
+                                    <div>
+                                      <strong>Input:</strong>
+                                      <div className="bg-background p-2 rounded mt-1 font-mono text-xs">
+                                        {testCase.input}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <strong>Expected Output:</strong>
+                                      <div className="bg-background p-2 rounded mt-1 font-mono text-xs">
+                                        {testCase.expected_output}
+                                      </div>
                                     </div>
                                   </div>
-                                  <div>
-                                    <strong>Expected Output:</strong>
-                                    <div className="bg-background p-2 rounded mt-1 font-mono text-xs">
-                                      {testCase.expected_output}
-                                    </div>
-                                  </div>
-                                </div>
-                              </Card>
-                            ))
-                          )}
+                                </Card>
+                              ))
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
+                      {!isTeacher && question.testcases.length > 0 && (
+                        <div className="bg-muted/50 p-3 rounded-lg">
+                          <p className="text-sm text-muted-foreground">
+                            {question.testcases.filter(tc => !tc.is_hidden).length} visible test case(s) available
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </Card>
                 ))

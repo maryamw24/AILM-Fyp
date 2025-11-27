@@ -9,10 +9,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { assignmentService } from "@/services/assignemntService"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function AddAssignmentPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const classId = params.id as string
 
   const [class_id, setClassId] = useState(classId)
@@ -31,6 +33,11 @@ export default function AddAssignmentPage() {
       return
     }
 
+    if (!user) {
+      alert("You must be logged in to create an assignment")
+      return
+    }
+
     setIsLoading(true)
     try {
       const newAssignment = await assignmentService.create({
@@ -45,7 +52,7 @@ export default function AddAssignmentPage() {
         openAt: openImmediately ? new Date().toISOString() : "",
         dueAt: new Date(dueAt).toISOString(),
         allowMultipleSubmissions,
-      }, "bfb5f450-e5b4-42b3-a1de-c5cd92618a90")
+      }, user.id)
 
       router.push(`/classes/${classId}/assignments/${newAssignment.id}/add-questions`)
     } catch (error) {

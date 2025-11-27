@@ -3,6 +3,8 @@ from . import models, schemas
 from passlib.context import CryptContext
 from sqlalchemy import select
 from typing import Optional
+import random
+import string
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -30,13 +32,41 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
+def generate_class_code(db: Session) -> str:
+    """Generate a unique class code in format: abc-123-xyz (lowercase alphanumeric)"""
+    max_attempts = 10
+    for _ in range(max_attempts):
+        # Generate 3 groups of 3 alphanumeric characters (lowercase)
+        code_parts = []
+        for _ in range(3):
+            # Use lowercase letters and numbers
+            part = ''.join(random.choices(string.ascii_lowercase + string.digits, k=3))
+            code_parts.append(part)
+        code = '-'.join(code_parts)
+        
+        # Check if code already exists
+        existing = db.query(models.Class).filter(models.Class.code == code).first()
+        if not existing:
+            return code
+    
+    # Fallback: if all attempts fail, use timestamp-based code
+    import time
+    timestamp = str(int(time.time()))[-9:]  # Last 9 digits
+    return f"{timestamp[:3]}-{timestamp[3:6]}-{timestamp[6:9]}"
+
+
 def create_class(db: Session, owner_id: str, cls: schemas.ClassCreate) -> models.Class:
+    # Auto-generate code if not provided
+    code = cls.code
+    if not code or not code.strip():
+        code = generate_class_code(db)
+    
     db_cls = models.Class(
         title=cls.title,
         description=cls.description,
         owner_id=owner_id,
         is_public=cls.is_public,
-        code=cls.code,
+        code=code,
     )
     db.add(db_cls)
     db.commit()
@@ -181,6 +211,52 @@ def get_user_by_email_or_create(db: Session, email: str) -> models.User:
     return user
 
 
+def join_class_by_code(db: Session, code: str, user_id: str) -> models.Class:
+    # Find class by code
+    class_ = db.query(models.Class).filter(models.Class.code == code).first()
+    if not class_:
+        return None
+    
+    # Get user
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        return None
+    
+    # Check if already a member
+    existing_member = (
+        db.query(models.ClassMember)
+        .filter(
+            models.ClassMember.class_id == class_.id,
+            models.ClassMember.user_id == user_id,
+        )
+        .first()
+    )
+    
+    if existing_member:
+        return class_  # Already enrolled, return class
+    
+    # Add user as member
+    member = models.ClassMember(class_id=class_.id, user_id=user_id, role="student")
+    db.add(member)
+    db.commit()
+    db.refresh(class_)
+    return class_
+
+
+def get_classes_by_student(db: Session, user_id: str):
+    # Get all class memberships for this user
+    memberships = (
+        db.query(models.ClassMember)
+        .filter(models.ClassMember.user_id == user_id)
+        .all()
+    )
+    
+    # Get the classes
+    class_ids = [m.class_id for m in memberships]
+    classes = db.query(models.Class).filter(models.Class.id.in_(class_ids)).all()
+    return classes
+
+
 def create_submission(
     db: Session, sub_in: schemas.SubmissionCreate
 ) -> models.Submission:
@@ -215,3 +291,151 @@ def grade_submission(db: Session, grade_req: schemas.GradeRequest):
     db.commit()
     db.refresh(s)
     return s
+
+
+def create_resource(db: Session, resource_in: schemas.ResourceCreate, uploader_id: str) -> models.CourseMaterial:
+    db_resource = models.CourseMaterial(
+        class_id=resource_in.class_id,
+        uploader_id=uploader_id,
+        title=resource_in.title,
+        description=resource_in.description,
+        file_url=resource_in.file_url,
+        file_type=resource_in.file_type,
+    )
+    db.add(db_resource)
+    db.commit()
+    db.refresh(db_resource)
+    return db_resource
+
+
+def get_resources_by_class(db: Session, class_id: str):
+    return db.query(models.CourseMaterial).filter(models.CourseMaterial.class_id == class_id).order_by(models.CourseMaterial.uploaded_at.desc()).all()
+
+
+def delete_resource(db: Session, resource_id: str) -> bool:
+    resource = db.query(models.CourseMaterial).filter(models.CourseMaterial.id == resource_id).first()
+    if not resource:
+        return False
+    db.delete(resource)
+    db.commit()
+    return True
+
+
+def get_leaderboard_by_class(db: Session, class_id: str):
+    """Get leaderboard for a class based on assignment completion count"""
+    # Get all class members (students)
+    members = (
+        db.query(models.ClassMember)
+        .filter(models.ClassMember.class_id == class_id, models.ClassMember.role == "student")
+        .all()
+    )
+    
+    # Get all assignments for this class
+    assignments = db.query(models.Assignment).filter(models.Assignment.class_id == class_id).all()
+    assignment_ids = [a.id for a in assignments]
+    
+    # Get all questions for these assignments
+    questions = (
+        db.query(models.Question)
+        .filter(models.Question.assignment_id.in_(assignment_ids))
+        .all()
+    )
+    question_ids = [q.id for q in questions]
+    
+    # Calculate completion stats for each student
+    leaderboard = []
+    for member in members:
+        # Count unique assignments the student has submitted to
+        submissions = (
+            db.query(models.Submission)
+            .filter(
+                models.Submission.user_id == member.user_id,
+                models.Submission.question_id.in_(question_ids)
+            )
+            .all()
+        )
+        
+        # Count unique assignments
+        submitted_assignments = set()
+        for sub in submissions:
+            # Find which assignment this question belongs to
+            question = next((q for q in questions if q.id == sub.question_id), None)
+            if question:
+                submitted_assignments.add(question.assignment_id)
+        
+        completion_count = len(submitted_assignments)
+        total_assignments = len(assignments)
+        
+        # Get user info
+        user = db.query(models.User).filter(models.User.id == member.user_id).first()
+        
+        leaderboard.append({
+            "user_id": member.user_id,
+            "name": user.display_name or user.full_name or user.email if user else "Unknown",
+            "email": user.email if user else "",
+            "completion_count": completion_count,
+            "total_assignments": total_assignments,
+            "completion_percentage": (completion_count / total_assignments * 100) if total_assignments > 0 else 0,
+        })
+    
+    # Sort by completion count (descending)
+    leaderboard.sort(key=lambda x: (x["completion_count"], x["completion_percentage"]), reverse=True)
+    
+    # Add rank
+    for i, entry in enumerate(leaderboard):
+        entry["rank"] = i + 1
+    
+    return leaderboard
+
+
+def create_message(db: Session, class_id: str, sender_id: str, content: str, message_type: str = "chat") -> models.Message:
+    db_message = models.Message(
+        class_id=class_id,
+        sender_id=sender_id,
+        content=content,
+        message_type=message_type,
+        is_private=False,
+    )
+    db.add(db_message)
+    db.commit()
+    db.refresh(db_message)
+    return db_message
+
+
+def get_messages_by_class(db: Session, class_id: str, limit: int = 100):
+    return (
+        db.query(models.Message)
+        .filter(models.Message.class_id == class_id, models.Message.is_private == False)
+        .order_by(models.Message.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def get_class_members(db: Session, class_id: str):
+    """Get all members of a class with user information"""
+    members = (
+        db.query(models.ClassMember)
+        .filter(models.ClassMember.class_id == class_id)
+        .order_by(models.ClassMember.joined_at.asc())
+        .all()
+    )
+    
+    result = []
+    for member in members:
+        user = db.query(models.User).filter(models.User.id == member.user_id).first()
+        result.append({
+            "id": member.id,
+            "user_id": member.user_id,
+            "role": member.role,
+            "joined_at": member.joined_at,
+            "is_active": member.is_active,
+            "user": {
+                "id": user.id if user else None,
+                "email": user.email if user else None,
+                "full_name": user.full_name if user else None,
+                "display_name": user.display_name if user else None,
+                "role": user.role if user else None,
+            } if user else None,
+        })
+    return result

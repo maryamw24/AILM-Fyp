@@ -8,14 +8,18 @@ import { useParams, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { assignmentService } from "@/services/assignemntService"
 import { Assignment } from "@/models/assignment"
+import { useAuth } from "@/contexts/auth-context"
 
 export function AssignmentsTab() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const classId = params.id as string
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  const isTeacher = user?.role === "teacher"
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -64,7 +68,7 @@ export function AssignmentsTab() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-shrink-0">
-              {!assignment.isActive && (
+              {isTeacher && !assignment.isActive && (
                 <Link href={`/classes/${classId}/assignments/${assignment.id}/add-questions`}>
                   <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
                     <Plus className="w-4 h-4" />
@@ -73,11 +77,10 @@ export function AssignmentsTab() {
                 </Link>
               )}
 
-              {!assignment.isActive && (
+              {isTeacher && !assignment.isActive && (
                 <Button
                   size="sm"
                   className="gap-2 w-full sm:w-auto"
-                  //  
                   disabled={loadingId === assignment.id}
                 >
                   <Play className="w-4 h-4" />
@@ -88,16 +91,18 @@ export function AssignmentsTab() {
               <Link href={`/classes/${classId}/assignments/${assignment.id}`}>
                 <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
                   <Eye className="w-4 h-4" />
-                  <span className="hidden sm:inline">Preview</span>
-                </Button>
-              </Link>
-              <Link href={`/classes/${classId}/assignments/${assignment.id}/submissions`}>
-                <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
-                  <Eye className="w-4 h-4" />
-                  <span className="hidden sm:inline">Submissions</span>
+                  <span className="hidden sm:inline">{isTeacher ? "Preview" : "View"}</span>
                 </Button>
               </Link>
               
+              {isTeacher && (
+                <Link href={`/classes/${classId}/assignments/${assignment.id}/submissions`}>
+                  <Button variant="outline" size="sm" className="gap-2 bg-transparent w-full sm:w-auto">
+                    <Eye className="w-4 h-4" />
+                    <span className="hidden sm:inline">Submissions</span>
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </Card>
